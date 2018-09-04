@@ -17,7 +17,10 @@
                   :scope "provided"]
                  [secretary "1.2.3"]
                  [venantius/accountant "0.2.4"
-                  :exclusions [org.clojure/tools.reader]]]
+                  :exclusions [org.clojure/tools.reader]]
+                 [org.clojure/core.async "0.4.474"]
+                 [cljs-http "0.1.45"]
+                 [fogus/ring-edn "0.3.0"]]
 
   :plugins [[lein-environ "1.1.0"]
             [lein-cljsbuild "1.1.7"]

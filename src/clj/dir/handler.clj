@@ -1,9 +1,10 @@
 (ns dir.handler
-  (:require [compojure.core :refer [GET defroutes]]
+  (:require [compojure.core :refer [GET POST defroutes]]
             [compojure.route :refer [not-found resources]]
             [hiccup.page :refer [include-js include-css html5]]
             [dir.middleware :refer [wrap-middleware]]
-            [config.core :refer [env]]))
+            [config.core :refer [env]]
+            [dir.pdf :refer [gen-pdf view-pdf]]))
 
 (def mount-target
   [:div#app
@@ -30,7 +31,10 @@
 (defroutes routes
   (GET "/" [] (loading-page))
   (GET "/about" [] (loading-page))
-  
+
+  (POST "/gen-report" [members] (gen-pdf members))
+  (GET "/report" [] (view-pdf))
+
   (resources "/")
   (not-found "Not Found"))
 
