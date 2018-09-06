@@ -11,7 +11,7 @@
 
 (def flex-v {:display "flex" :flex-direction "column" :padding 5})
 
-(def child-v {:margin 5})
+(def child {:margin 5})
 
 ;; -------------------------
 ;; Views
@@ -35,20 +35,22 @@
   [:div {:style (merge flex-v
                        {:background "lightgrey"
                         :border-radius 10})}
-   [:h3 {:style child-v} "22nd ward directory generator"]
-   [:a {:style child-v :href "https://airtable.com/tblOSSpjahPdE2ZQ8/viwNb7TTwWeQ66NaC"}
+   [:h3 {:style child} "22nd ward directory generator"]
+   [:a {:style child :href "https://airtable.com/tblOSSpjahPdE2ZQ8/viwNb7TTwWeQ66NaC"}
     "View data on Airtable"]
-   [lbl-input {:style child-v :label "Airtable token:" :state-key :token
+   [lbl-input {:style child :label "Airtable token:" :state-key :token
                :on-change #(swap! state dissoc :bad-token)}]
-   [:input {:style child-v :type "file" :on-change
+   [:input {:style child :type "file" :on-change
             #(swap! state assoc :file (-> % .-target .-files (aget 0)))}]
-   [button {:style child-v :on-click air/synch! :text "Sync to airtable"
+   [button {:style child :on-click air/synch! :text "Sync to airtable"
             :disabled (or (bad-token?) (nil? (:file @state)))}]
-   [button {:style child-v :on-click air/pdf :text "Generate pdf"
+   [:div
+    [button {:style child :on-click air/pdf :text "Update pdf"
             :disabled (bad-token?)}]
-   [:div {:style child-v} (:status @state)]
+    [:a {:style child :href "/report"} "View current pdf"]]
+   [:div {:style child} (:status @state)]
    (when (:bad-token @state)
-     [:div {:style (merge child-v {:color "red"})} "Incorrect token"])])
+     [:div {:style (merge child {:color "red"})} "Incorrect token"])])
 
 ;; -------------------------
 ;; Routes

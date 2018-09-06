@@ -2,12 +2,13 @@
   (:require [hiccup.core :refer [html]]
             [ring.util.response :as ring-resp]
             [clojure.java.shell :refer [sh]]
-            [clojure.string :as str]))
+            [clojure.string :as str]
+            [clojure.tools.logging :as log]))
 
 (defn append [coll x]
   (if (vector? coll)
     (conj coll x)
-    (concat coll (list x))))
+    (concat coll [x])))
 
 (def tmpdir "/tmp/")
 
@@ -51,8 +52,15 @@
       margin-bottom: 10px;
   }")
 
+(defn spy [& args]
+  (let [prefix (apply str (butlast args))
+        result (last args)
+        fmt (str prefix (when-not (empty? prefix) ": ") "%s")]
+   (log/spyf :info fmt result)))
+
 (defn make-page-pdf [html filename]
-  (sh "wkhtmltopdf" "--page-size" "A5" "-" filename :in html))
+  (spy "wkhtmltopdf" filename (sh "wkhtmltopdf" "--log-level" "warn" "--page-size" "A5"
+                                  "-" filename :in html)))
 
 (defn make-page [[apt members]]
   (let [filename (str tmpdir (if (str/blank? apt) "orphans" apt))]
@@ -74,7 +82,8 @@
     filename))
 
 (defn unite [pages]
-  (apply sh "pdfunite" (append pages pdf-path)))
+  (let [args (append pages pdf-path)]
+    (spy "pdfunite " args (apply sh "pdfunite" args))))
 
 (defn apt-sort [[apt _]]
   (if (some #(str/includes? apt %) ["Park Plaza" "Stonebridge"])
@@ -82,10 +91,12 @@
     "zzzz"))
 
 (defn gen-pdf [members]
-  (let [sorted (sort-by apt-sort (group-by :apt members))
-        pages (pmap make-page sorted)]
-    (unite pages)
-    ""))
+  (->> members
+       (group-by :apt)
+       (sort-by apt-sort)
+       (pmap make-page)
+       unite)
+  "")
 
 (defn view-pdf []
   (ring-resp/file-response pdf-path))

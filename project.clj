@@ -20,7 +20,12 @@
                   :exclusions [org.clojure/tools.reader]]
                  [org.clojure/core.async "0.4.474"]
                  [cljs-http "0.1.45"]
-                 [fogus/ring-edn "0.3.0"]]
+                 [fogus/ring-edn "0.3.0"]
+                 [org.clojure/tools.logging "0.4.1"]
+                 [log4j/log4j "1.2.17" :exclusions [javax.mail/mail
+                                                  javax.jms/jms
+                                                  com.sun.jdmk/jmxtools
+                                                  com.sun.jmx/jmxri]]]
 
   :plugins [[lein-environ "1.1.0"]
             [lein-cljsbuild "1.1.7"]

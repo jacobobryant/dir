@@ -119,11 +119,10 @@
         (swap! state assoc :status "Done syncing")))))
 
 (defn pdf []
-  (swap! state assoc :status "Generating pdf...")
+  (swap! state assoc :status "Updating pdf...")
   (go (let [payload (->> (<! (get-air-members))
                          (map #(get-in % [1 :fields]))
                          (filter :in-lds-tools))
             response (<! (http/post "/gen-report"
                                     {:edn-params {:members payload}}))]
-        (swap! state assoc :status "Done generating pdf")
-        (set! (.-location js/window) "/report"))))
+        (swap! state assoc :status "Done updating pdf"))))
