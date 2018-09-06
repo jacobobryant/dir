@@ -36,11 +36,3 @@ a:hover {
 div {
     margin: 0;
 }
-
-.flex-v {
-    display: flex;
-    flex-direction: column;
-}
-.flex-v > * {
-    margin-bottom: 10px;
-}

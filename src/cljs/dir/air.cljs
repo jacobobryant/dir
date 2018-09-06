@@ -54,7 +54,7 @@
 
 (defn air-request [method url params]
   (go
-    (when (not (:bad-token @state))
+    (when-not (:bad-token @state)
       (let [exec-time (:last-req (swap! state update :last-req
                                         #(if (nil? %) (now) (max (now) (+ % 220)))))
             _ (<! (timeout (max 0 (- exec-time (now))))) ; rate limiting
@@ -84,19 +84,19 @@
   [airtable-id]
   (str table-url "/" airtable-id))
 
-(defn update-member
+(defn update-member!
   [record airtable-id]
   (air-request http/patch (record-url airtable-id) record))
 
-(defn add-member
+(defn add-member!
   [record]
   (air-request http/post table-url record))
 
-(defn hide-member
+(defn hide-member!
   [airtable-id]
   (air-request http/patch (record-url airtable-id) {:in-lds-tools false}))
 
-(defn synch [e]
+(defn synch! [e]
   (when-let [file (:file @state)]
     (swap! state assoc :status "Syncing...")
     (go
@@ -105,18 +105,18 @@
                              (map parse-member)
                              (map (fn [record] [(:lds-tools-name record) record]))
                              (into {}))
-            air-members (<! (get-air-members))]
-
-        (doseq [[lds-name record] csv-members]
-          (<! (if-let [airtable-id (get-in air-members [lds-name :id])]
-                (update-member record airtable-id)
-                (add-member record))))
-
-        (doseq [[lds-name air-record] air-members]
-          (when (not (contains? csv-members lds-name))
-            (<! (hide-member (:id air-record)))))
-
-      (swap! state assoc :status "Done syncing")))))
+            air-members (<! (get-air-members))
+            actions (concat
+                      (for [[lds-name record] csv-members]
+                        (if-let [airtable-id (get-in air-members [lds-name :id])]
+                          (update-member! record airtable-id)
+                          (add-member! record)))
+                      (filter identity
+                              (for [[lds-name air-record] air-members]
+                                (when-not (contains? csv-members lds-name)
+                                  (hide-member! (:id air-record))))))]
+        (doseq [a actions] (<! a))
+        (swap! state assoc :status "Done syncing")))))
 
 (defn pdf []
   (swap! state assoc :status "Generating pdf...")

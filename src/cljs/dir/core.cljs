@@ -7,42 +7,48 @@
               [clojure.string :as str]))
 
 ;; -------------------------
+;; Styles
+
+(def flex-v {:display "flex" :flex-direction "column" :padding 5})
+
+(def child-v {:margin 5})
+
+;; -------------------------
 ;; Views
 
-(defn button [{:keys [on-click text disabled]}]
-  [:button {:style {:width "120px"} :on-click on-click :disabled disabled} text])
+(defn button [{:keys [style on-click text disabled]}]
+  [:button {:style (merge {:width 120} style) :on-click on-click :disabled disabled} text])
 
 (defn lbl-input
-  ([label state-key] (lbl-input label state-key nil))
-  ([label state-key callback]
-  [:div label [:input {:type :text
-                       :style {:margin-left "10px"}
-                       :default-value (state-key @state)
-                       :on-change #(do (swap! state assoc state-key (.. % -target -value))
-                                       (and callback (callback %)))}]]))
+  [{:keys [style label state-key on-change]}]
+  [:div {:style style} label
+   [:input {:type :text :style {:margin-left "10px"}
+            :default-value (state-key @state)
+            :on-change #(do (swap! state assoc state-key (.. % -target -value))
+                            (on-change %))}]])
 
 (defn bad-token? []
   (or (:bad-token @state)
       (str/blank? (:token @state))))
 
 (defn main-page []
-  [:div.flex-v
-   [:h3 "22nd ward directory generator"]
-   [:a {:href "https://airtable.com/tblOSSpjahPdE2ZQ8/viwNb7TTwWeQ66NaC"}
+  [:div {:style (merge flex-v
+                       {:background "lightgrey"
+                        :border-radius 10})}
+   [:h3 {:style child-v} "22nd ward directory generator"]
+   [:a {:style child-v :href "https://airtable.com/tblOSSpjahPdE2ZQ8/viwNb7TTwWeQ66NaC"}
     "View data on Airtable"]
-   [lbl-input "Airtable token:" :token #(swap! state dissoc :bad-token)]
-   [:input {:type "file" :on-change
+   [lbl-input {:style child-v :label "Airtable token:" :state-key :token
+               :on-change #(swap! state dissoc :bad-token)}]
+   [:input {:style child-v :type "file" :on-change
             #(swap! state assoc :file (-> % .-target .-files (aget 0)))}]
-
-   [button {:on-click air/synch :text "Sync to airtable"
+   [button {:style child-v :on-click air/synch! :text "Sync to airtable"
             :disabled (or (bad-token?) (nil? (:file @state)))}]
-
-   [button {:on-click air/pdf :text "Generate pdf"
+   [button {:style child-v :on-click air/pdf :text "Generate pdf"
             :disabled (bad-token?)}]
-
-   [:div (:status @state)]
-   (if (:bad-token @state)
-     [:div {:style {:color "red"}} "Incorrect token"])])
+   [:div {:style child-v} (:status @state)]
+   (when (:bad-token @state)
+     [:div {:style (merge child-v {:color "red"})} "Incorrect token"])])
 
 ;; -------------------------
 ;; Routes
