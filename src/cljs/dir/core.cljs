@@ -13,6 +13,8 @@
 
 (def child {:margin 5})
 
+(def small {:font-size "0.7em"})
+
 ;; -------------------------
 ;; Views
 
@@ -46,11 +48,17 @@
             :disabled (or (bad-token?) (nil? (:file @state)))}]
    [:div
     [button {:style child :on-click air/pdf :text "Update pdf"
-            :disabled (bad-token?)}]
+            :disabled (or (bad-token?) (get-in @state [:pdf-status :updating]))}]
     [:a {:style child :href "/report"} "View current pdf"]]
-   [:div {:style child} (:status @state)]
+   (when-let [last-updated (get-in @state [:pdf-status :last-updated])]
+     [:div {:style (merge child small)}
+      (str "pdf last updated: " (js/Date. last-updated))])
    (when (:bad-token @state)
-     [:div {:style (merge child {:color "red"})} "Incorrect token"])])
+     [:div {:style (merge child {:color "red"})} "Incorrect token"])
+   (when-let [status (:status @state)]
+     [:div {:style child} status])
+   (when (get-in @state [:pdf-status :updating])
+     [:div {:style child} "Updating pdf..."])])
 
 ;; -------------------------
 ;; Routes
@@ -78,4 +86,5 @@
      (fn [path]
        (secretary/locate-route path))})
   (accountant/dispatch-current!)
-  (mount-root))
+  (mount-root)
+  (air/start-polling!))

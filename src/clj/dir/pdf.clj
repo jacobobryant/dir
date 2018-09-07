@@ -5,6 +5,9 @@
             [clojure.string :as str]
             [clojure.tools.logging :as log]))
 
+(def state (atom {:updating false
+                  :last-updated nil}))
+
 (defn append [coll x]
   (if (vector? coll)
     (conj coll x)
@@ -90,13 +93,27 @@
     apt
     "zzzz"))
 
-(defn gen-pdf [members]
-  (->> members
-       (group-by :apt)
-       (sort-by apt-sort)
-       (pmap make-page)
-       unite)
-  "")
+(defn edn-response [data & [status]]
+  {:status (or status 200)
+   :headers {"Content-Type" "application/edn"}
+   :body (pr-str data)})
+
+(defn pdf-status []
+  (edn-response (spy "pdf status" @state)))
+
+(defn gen-pdf! [members]
+  (when-not (:updating @state)
+    (swap! state assoc :updating true)
+    (future
+      (log/info "updating pdf")
+      (->> members
+           (group-by :apt)
+           (sort-by apt-sort)
+           (map make-page)
+           unite)
+      (swap! state assoc :updating false :last-updated (System/currentTimeMillis))
+      (log/info "done updating pdf")))
+  (pdf-status))
 
 (defn view-pdf []
   (ring-resp/file-response pdf-path))

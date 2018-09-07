@@ -4,7 +4,7 @@
             [hiccup.page :refer [include-js include-css html5]]
             [dir.middleware :refer [wrap-middleware]]
             [config.core :refer [env]]
-            [dir.pdf :refer [gen-pdf view-pdf]]))
+            [dir.pdf :refer [gen-pdf! view-pdf pdf-status]]))
 
 (def mount-target
   [:div#app
@@ -32,8 +32,9 @@
   (GET "/" [] (loading-page))
   (GET "/about" [] (loading-page))
 
-  (POST "/gen-report" [members] (gen-pdf members))
+  (POST "/gen-report" [members] (gen-pdf! members))
   (GET "/report" [] (view-pdf))
+  (GET "/status" [] (pdf-status))
 
   (resources "/")
   (not-found "Not Found"))
