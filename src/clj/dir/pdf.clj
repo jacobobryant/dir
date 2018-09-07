@@ -5,8 +5,8 @@
             [clojure.string :as str]
             [clojure.tools.logging :as log]))
 
-(def state (atom {:updating false
-                  :last-updated nil}))
+(defonce state (atom {:updating false
+                      :last-updated nil}))
 
 (defn append [coll x]
   (if (vector? coll)
@@ -39,6 +39,7 @@
       width: 141px;
       margin-bottom: 10px;
       margin-right: 10px;
+      object-fit: cover;
   }
   .info {
       font-size: 1.2em;
@@ -74,7 +75,7 @@
           [:div.apt apt]
           (for [m members]
             [:div.listing
-             [:img {:src (:picture m)}]
+             [:img {:src (-> m :picture first :url)}]
              [:div.info
               [:div.name (some m [:override-name :lds-tools-name])]
               [:hr]
