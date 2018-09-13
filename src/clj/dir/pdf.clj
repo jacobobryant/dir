@@ -17,10 +17,16 @@
 
 (def pdf-path "/tmp/directory.pdf")
 
+(def html-path "/tmp/directory.html")
+
 (def css "
+  @media print {
+      .page {
+           page-break-after: always;
+       }
+  }
   body {
       font-family: Arial, sans-serif;
-      margin: 0.5in;
   }
   .apt {
       font-size: 2em;
@@ -61,45 +67,28 @@
         fmt (str prefix (when-not (empty? prefix) ": ") "%s")]
    (log/spyf :info fmt result)))
 
-(defn make-pdfs [html-filenames pdf-filenames]
-  (let [args (flatten (map (fn [html pdf]
-                             ["--url" (str "file://" html) "--pdf" pdf])
-                           html-filenames pdf-filenames))]
-    (spy (apply sh "chrome-headless-render-pdf" "--paper-width" "5.5"
-                "--paper-height" "8.5" "--include-background" "--no-margins"
-                args))))
-
-(defn html-for [apt members]
+(defn html-for [apts-members]
   [:html
    [:body [:head [:style css]]
-    [:div.apt apt]
-    (for [m members]
-      [:div.listing
-       [:img {:src (-> m :picture first :url)}]
-       [:div.info
-        [:div.name (some m [:override-name :lds-tools-name])]
-        [:hr]
-        [:div.phone.info-line (:phone m)]
-        [:div.email.info-line (:email m)]
-        (when-let [b (:birthday m)]
-          [:div.birthday.info-line "Birthday: " b])]])]])
+    (for [[apt members] apts-members]
+      [:div.page
+       [:div.apt apt]
+       (for [m members]
+         [:div.listing
+          [:img {:src (-> m :picture first :url)}]
+          [:div.info
+           [:div.name (some m [:override-name :lds-tools-name])]
+           [:hr]
+           [:div.phone.info-line (:phone m)]
+           [:div.email.info-line (:email m)]
+           (when-let [b (:birthday m)]
+             [:div.birthday.info-line "Birthday: " b])]])])]])
 
-(defn generate [apts-members]
-  (let [base-filenames (map (fn [[apt _]]
-                         (str tmpdir (if (str/blank? apt)
-                                       "orphans"
-                                       (str/replace apt #"[ #]" ""))))
-                       apts-members)
-        [html-filenames pdf-filenames]
-        (map (fn [ext] (map #(str % ext) base-filenames)) [".html" ".pdf"])]
-    (doseq [[filename [apt members]] (map vector html-filenames apts-members)]
-      (spit filename (html (html-for apt members))))
-    (make-pdfs html-filenames pdf-filenames)
-    (unite pdf-filenames)))
-
-(defn unite [pages]
-  (let [args (append pages pdf-path)]
-    (spy "pdfunite " args (apply sh "pdfunite" args))))
+(defn generate! [apts-members]
+  (spit html-path (html (html-for apts-members)))
+  (spy (sh "chrome-headless-render-pdf" "--paper-width" "5.5"
+              "--paper-height" "8.5" "--include-background"
+              "--url" (str "file://" html-path) "--pdf" pdf-path)))
 
 (defn apt-sort [[apt _]]
   (if (some #(str/includes? apt %) ["Park Plaza" "Stonebridge"])
@@ -123,7 +112,7 @@
       (->> members
            (group-by :apt)
            (sort-by apt-sort)
-           generate)
+           generate!)
       (swap! state assoc :updating false :last-updated (System/currentTimeMillis))
       (log/info "done updating pdf")))
   (pdf-status))
