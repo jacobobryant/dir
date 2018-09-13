@@ -5,8 +5,6 @@
             [clojure.string :as str]
             [clojure.tools.logging :as log]))
 
-; TODO handle pages with >4 people
-
 (defonce state (atom {:updating false
                       :last-updated nil}))
 
@@ -63,11 +61,13 @@
         fmt (str prefix (when-not (empty? prefix) ": ") "%s")]
    (log/spyf :info fmt result)))
 
-(defn make-page-pdf [html filename]
-  (spit (str filename ".html") html)
-  ; TODO see if this command can generate the whole pdf in one go
-  (spy (sh "chrome-headless-render-pdf" "--paper-width" "5.5" "--paper-height" "8.5"
-           "--include-background" "--no-margins" "--url" (str "file://" filename ".html") "--pdf" filename)))
+(defn make-pdfs [html-filenames pdf-filenames]
+  (let [args (flatten (map (fn [html pdf]
+                             ["--url" (str "file://" html) "--pdf" pdf])
+                           html-filenames pdf-filenames))]
+    (spy (apply sh "chrome-headless-render-pdf" "--paper-width" "5.5"
+                "--paper-height" "8.5" "--include-background" "--no-margins"
+                args))))
 
 (defn html-for [apt members]
   [:html
@@ -84,10 +84,18 @@
         (when-let [b (:birthday m)]
           [:div.birthday.info-line "Birthday: " b])]])]])
 
-(defn make-page [[apt members]]
-  (let [filename (str tmpdir (if (str/blank? apt) "orphans" (str/replace apt #"[ #]" "")))]
-    (make-page-pdf (html (html-for apt members)) filename)
-    filename))
+(defn generate [apts-members]
+  (let [base-filenames (map (fn [[apt _]]
+                         (str tmpdir (if (str/blank? apt)
+                                       "orphans"
+                                       (str/replace apt #"[ #]" ""))))
+                       apts-members)
+        [html-filenames pdf-filenames]
+        (map (fn [ext] (map #(str % ext) base-filenames)) [".html" ".pdf"])]
+    (doseq [[filename [apt members]] (map vector html-filenames apts-members)]
+      (spit filename (html (html-for apt members))))
+    (make-pdfs html-filenames pdf-filenames)
+    (unite pdf-filenames)))
 
 (defn unite [pages]
   (let [args (append pages pdf-path)]
@@ -107,6 +115,7 @@
   (edn-response (spy "pdf status" @state)))
 
 (defn gen-pdf! [members]
+  (swap! state assoc :members (->> members (group-by :apt) (sort-by apt-sort)))
   (when-not (:updating @state)
     (swap! state assoc :updating true)
     (future
@@ -114,8 +123,7 @@
       (->> members
            (group-by :apt)
            (sort-by apt-sort)
-           (map make-page)
-           unite)
+           generate)
       (swap! state assoc :updating false :last-updated (System/currentTimeMillis))
       (log/info "done updating pdf")))
   (pdf-status))
