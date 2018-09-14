@@ -104,7 +104,6 @@
   (edn-response (spy "pdf status" @state)))
 
 (defn gen-pdf! [members]
-  (swap! state assoc :members (->> members (group-by :apt) (sort-by apt-sort)))
   (when-not (:updating @state)
     (swap! state assoc :updating true)
     (future
