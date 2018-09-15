@@ -25,7 +25,8 @@
                  [log4j/log4j "1.2.17" :exclusions [javax.mail/mail
                                                     javax.jms/jms
                                                     com.sun.jdmk/jmxtools
-                                                    com.sun.jmx/jmxri]]]
+                                                    com.sun.jmx/jmxri]]
+                 [ring-logger "1.0.1"]]
 
   :plugins [[lein-environ "1.1.0"]
             [lein-cljsbuild "1.1.7"]

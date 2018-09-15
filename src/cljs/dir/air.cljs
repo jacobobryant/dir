@@ -118,19 +118,19 @@
         (doseq [a actions] (<! a))
         (swap! state assoc :status "Done syncing")))))
 
+(defn update-pdf-status! [response]
+  (swap! state update :pdf-status #(merge % (:body response))))
+
 (defn pdf []
   (go (let [payload (->> (<! (get-air-members))
                          (map #(get-in % [1 :fields]))
                          (filter :in-lds-tools))
             response (<! (http/post "/gen-report"
                                     {:edn-params {:members payload}}))]
-        (swap! state assoc :pdf-status (:body response)))))
+        (update-pdf-status! response))))
 
 (defn start-polling! []
   (println "starting polling")
   (js/setInterval
-    (fn []
-      (go (let [response (<! (http/get "/status"))]
-            (swap! state assoc :pdf-status (:body response)))))
-    5000))
-
+    #(go (update-pdf-status! (<! (http/get "/status"))))
+    2000))

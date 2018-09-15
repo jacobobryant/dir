@@ -46,19 +46,22 @@
             #(swap! state assoc :file (-> % .-target .-files (aget 0)))}]
    [button {:style child :on-click air/synch! :text "Sync to airtable"
             :disabled (or (bad-token?) (nil? (:file @state)))}]
-   [:div
-    [button {:style child :on-click air/pdf :text "Update pdf"
-            :disabled (or (bad-token?) (get-in @state [:pdf-status :updating]))}]
-    [:a {:style child :href "/report"} "View current pdf"]]
-   (when-let [last-updated (get-in @state [:pdf-status :last-updated])]
-     [:div {:style (merge child small)}
-      (str "pdf last updated: " (js/Date. last-updated))])
-   (when (:bad-token @state)
-     [:div {:style (merge child {:color "red"})} "Incorrect token"])
-   (when-let [status (:status @state)]
-     [:div {:style child} status])
-   (when (get-in @state [:pdf-status :updating])
-     [:div {:style child} "Updating pdf..."])])
+   (let [status (:pdf-status @state)]
+     (list
+       [:div
+        [button {:style child :on-click air/pdf :text "Generate pdf"
+                 :disabled (or (bad-token?) (:updating status))}]
+        (when (and (:secret status) (not (:updating status)))
+          [:a {:style child :href (str "/report/" (:secret status))} "View pdf"])]
+       (when-let [last-updated (:last-updated status)]
+         [:div {:style (merge child small)}
+          (str "pdf last updated: " (js/Date. last-updated))])
+       (when (:bad-token @state)
+         [:div {:style (merge child {:color "red"})} "Incorrect token"])
+       (when-let [status (:status @state)]
+         [:div {:style child} status])
+       (when (:updating status)
+         [:div {:style child} "Generating pdf..."])))])
 
 ;; -------------------------
 ;; Routes

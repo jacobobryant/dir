@@ -6,7 +6,8 @@
             [clojure.tools.logging :as log]))
 
 (defonce state (atom {:updating false
-                      :last-updated nil}))
+                      :last-updated nil
+                      :secret 666}))
 
 (defn append [coll x]
   (if (vector? coll)
@@ -101,20 +102,30 @@
    :body (pr-str data)})
 
 (defn pdf-status []
-  (edn-response (spy "pdf status" @state)))
+  (edn-response
+    (spy "pdf status"
+         (select-keys @state [:updating :last-updated]))))
 
 (defn gen-pdf! [members]
-  (when-not (:updating @state)
-    (swap! state assoc :updating true)
-    (future
-      (log/info "updating pdf")
-      (->> members
-           (group-by :apt)
-           (sort-by apt-sort)
-           generate!)
-      (swap! state assoc :updating false :last-updated (System/currentTimeMillis))
-      (log/info "done updating pdf")))
-  (pdf-status))
+  (if (:updating @state)
+    (pdf-status)
+    (do
+      (swap! state assoc :updating true :secret
+             (spy "new secret" (str (java.util.UUID/randomUUID))))
+      (future
+        (log/info "updating pdf")
+        (->> members
+             (group-by :apt)
+             (sort-by apt-sort)
+             generate!)
+        (swap! state assoc :updating false :last-updated (System/currentTimeMillis))
+        (log/info "done updating pdf"))
+      (edn-response
+          (select-keys @state [:updating :last-updated :secret])))))
 
-(defn view-pdf []
-  (ring-resp/file-response pdf-path))
+(defn view-pdf [secret]
+  (if (= secret (:secret @state))
+    (ring-resp/file-response pdf-path)
+    {:status 403
+     :headers {"Content-type" "text/html"}
+     :body "Nice try, you miserable, vomitous mass"}))

@@ -33,7 +33,7 @@
   (GET "/about" [] (loading-page))
 
   (POST "/gen-report" [members] (gen-pdf! members))
-  (GET "/report" [] (view-pdf))
+  (GET "/report/:secret" [secret] (view-pdf secret))
   (GET "/status" [] (pdf-status))
 
   (resources "/")
